@@ -1,0 +1,9 @@
+[
+  {
+    "query_text": "What is the main topic of the sample document?",
+    "expected_answer": "A sample PDF for testing the RAG platform.",
+    "expected_chunk_ids": [],
+    "category": "factual",
+    "difficulty": "easy"
+  }
+]

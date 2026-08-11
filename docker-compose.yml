@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ragdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ragdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ragdb
+      HF_HOME: /app/data/huggingface
+      STORAGE_DIR: /app/data/uploads
+    volumes:
+      - ./data:/app/data
+      - ./eval-reports:/app/eval-reports
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn src.main:create_app --factory --host 0.0.0.0 --port 8000
+
+  api-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/ragdb
+      HF_HOME: /app/data/huggingface
+      STORAGE_DIR: /app/data/uploads
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./eval-reports:/app/eval-reports
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: uvicorn src.main:create_app --factory --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
